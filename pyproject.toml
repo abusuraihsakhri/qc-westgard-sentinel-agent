@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qc-westgard-sentinel-engine"
+version = "2.0.0"
+description = "Westgard Sentinel: Real-Time Multi-Rule Analytical Quality Control & Calibration Engine"
+readme = "README.md"
+authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+qc-westgard-sentinel-engine = "qc_westgard_sentinel_agent.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/abusuraihsakhri/qc-westgard-sentinel-engine"
+Repository = "https://github.com/abusuraihsakhri/qc-westgard-sentinel-engine.git"
