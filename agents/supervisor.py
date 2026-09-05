@@ -3,8 +3,8 @@ Supervisor Orchestrator & Operations Intelligence for Qc Westgard Sentinel Agent
 Domain: Clinical & Biomedical AI
 """
 import uuid
-from typing import Dict, Any, List, Optional
-from .base import AuditLogger, ActionExecutor, PHIGuard
+from typing import Dict, List
+from .base import AuditLogger, PHIGuard
 from .models import SystemTaskPayload, AgentAlert, ConsensusDossier, UrgencyLevel, SystemIntegrityStatus
 from .workers import InvariantQCWorker, SafetyEscalationWorker, ProtocolConformanceWorker
 from .llm_factory import LLMFactory
@@ -25,6 +25,12 @@ class SystemSupervisor:
         PHIGuard.assert_no_phi(payload.task_id)
         PHIGuard.assert_no_phi(payload.target_identifier)
         PHIGuard.assert_no_phi(payload.status_descriptor)
+
+        # Input validation: bounds checking for metric values
+        if not (-1e6 <= payload.primary_metric <= 1e6):
+            raise ValueError(f"primary_metric out of bounds: {payload.primary_metric}")
+        if not (-1e6 <= payload.secondary_metric <= 1e6):
+            raise ValueError(f"secondary_metric out of bounds: {payload.secondary_metric}")
 
         # Multi-worker evaluations
         all_alerts: List[AgentAlert] = []

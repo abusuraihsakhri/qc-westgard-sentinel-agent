@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from agents.base import PHIGuard, AuditLogger, SecurityException
+from agents.base import PHIGuard, AuditLogger, SecurityException, AuditTrail
 from agents.models import SystemTaskPayload, UrgencyLevel, SystemIntegrityStatus
 from agents.workers import InvariantQCWorker, SafetyEscalationWorker, ProtocolConformanceWorker
 from agents.supervisor import SystemSupervisor
@@ -21,6 +21,12 @@ def test_phi_guard_enforcement():
 
     # Clean text passes
     PHIGuard.assert_no_phi("Analytical assay specimen KEY-001 optimal")
+
+
+def test_phi_guard_redaction():
+    redacted = PHIGuard.redact_phi("Contact patient at 555-123-4567")
+    assert "555-123-4567" not in redacted
+    assert "[REDACTED_IDENTIFIER]" in redacted
 
 
 def test_specialized_workers():
@@ -63,3 +69,51 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_input_validation_bounds_checking():
+    """Test that metric values outside reasonable bounds are rejected."""
+    supervisor = SystemSupervisor(model_provider="mock")
+
+    # Test primary_metric out of bounds
+    payload = SystemTaskPayload(
+        task_id="TASK-BOUNDS-01",
+        target_identifier="KEY-01",
+        primary_metric=1e7,  # Exceeds 1e6 bound
+        secondary_metric=5.0,
+    )
+    with pytest.raises(ValueError, match="primary_metric out of bounds"):
+        supervisor.process_task(payload)
+
+    # Test secondary_metric out of bounds
+    payload2 = SystemTaskPayload(
+        task_id="TASK-BOUNDS-02",
+        target_identifier="KEY-02",
+        primary_metric=10.0,
+        secondary_metric=-1e7,  # Below -1e6 bound
+    )
+    with pytest.raises(ValueError, match="secondary_metric out of bounds"):
+        supervisor.process_task(payload2)
+
+
+def test_audit_trail_integrity():
+    """Test that audit trail maintains cryptographic integrity."""
+    trail = AuditTrail(secret_key="test-secret-key-2026")
+
+    # Log some entries
+    trail.log("test_actor", "test_tier", "TEST_EVENT", {"data": "value1"})
+    trail.log("test_actor", "test_tier", "TEST_EVENT", {"data": "value2"})
+    trail.log("test_actor", "test_tier", "TEST_EVENT", {"data": "value3"})
+
+    # Verify integrity
+    assert trail.verify_integrity() is True
+    assert len(trail.get_trail()) == 3
+
+
+def test_phi_guard_blocks_patient_names():
+    """Test that common patient names are blocked."""
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Patient Name: John Doe")
+
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Alice Johnson presenting with symptoms")
