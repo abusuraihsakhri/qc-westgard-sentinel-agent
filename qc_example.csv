@@ -1,0 +1,5 @@
+run,level,value,mean,sd
+1,Low,100.5,100,5
+1,High,100.2,100,5
+2,Low,112,100,5
+2,High,113,100,5
