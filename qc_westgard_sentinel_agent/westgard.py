@@ -77,8 +77,11 @@ def evaluate_qc(measurements: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         level_reference[level] = ref
         if any(p["level"] == level for p in by_run.get(run, [])):
             raise ValueError(f"Row {index + 1}: duplicate level {level} in run {run}")
+        z = (value - mean) / sd
+        if not math.isfinite(z):
+            raise ValueError(f"Row {index + 1}: standardized value is not finite")
         p = {"index": index, "run": run, "level": level, "value": value,
-             "mean": mean, "sd": sd, "z": (value - mean) / sd, "rules": []}
+             "mean": mean, "sd": sd, "z": z, "rules": []}
         points.append(p)
         by_run.setdefault(run, []).append(p)
 
@@ -115,8 +118,9 @@ def evaluate_qc(measurements: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 
         # Across different control levels, but only within the same run.
         if len(run_points) >= 2:
-            if _same_side(run_points, 2):
-                flag("2_2s", run_points)
+            for i in range(1, len(run_points)):
+                if _same_side(run_points[i - 1:i + 1], 2):
+                    flag("2_2s", run_points[i - 1:i + 1])
             high = next((p for p in run_points if p["z"] > 2), None)
             low = next((p for p in run_points if p["z"] < -2), None)
             if high is not None and low is not None:
