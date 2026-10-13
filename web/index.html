@@ -1,236 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qc Westgard Sentinel Engine — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local, deterministic Westgard multirule QC evaluation and Levey–Jennings visualization.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Westgard QC Sentinel — Laboratory quality control</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0c1220;--panel:#151f30;--border:#304056;--text:#edf4fa;--muted:#bdcad9;--accent:#86baf9;--warn:#f9bf63;--reject:#fc8282;--ok:#8cdbb5}
+    *{box-sizing:border-box}body{margin:0;padding:clamp(1rem,3vw,2rem);font:15px/1.55 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+    main{max-width:1200px;margin:auto}h1{font-size:clamp(1.6rem,3vw,2.25rem);letter-spacing:-.03em;margin:0}h2{font-size:1.1rem;margin:0 0 .6rem}
+    p{margin:.4rem 0 1rem;color:var(--muted)}.eyebrow{color:var(--accent);font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;font-weight:750}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1rem;align-items:start}.panel{border:1px solid var(--border);background:var(--panel);border-radius:12px;padding:1.2rem;margin:1rem 0}
+    label{display:block;margin:.7rem 0 .3rem;font-weight:600}.hint{font-size:.82rem;color:var(--muted)}textarea, input[type="file"]{width:100%;border:1px solid #5c6c80;border-radius:6px;background:#0b1423;color:var(--text);padding:.7rem;font:inherit}
+    textarea{font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:265px;resize:vertical}
+    textarea:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+    .actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}button{font:inherit;font-weight:650;cursor:pointer;background:var(--accent);color:#101826;border:0;border-radius:7px;padding:.67rem 1rem}button.secondary{background:#263a53;color:var(--text);border:1px solid #5b7697}button:disabled{cursor:not-allowed;opacity:.45}
+    .notice{border-left:3px solid var(--warn);padding:.5rem .8rem;background:#222535;color:var(--text);font-size:.87rem;margin-top:.9rem}
+    .chart-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:7px;background:#0d1625}.chart-wrap svg{display:block;width:100%;min-width:460px;height:auto}.legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin:.65rem 0}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem}.normal{background:var(--ok)}.warning{background:var(--warn)}.reject{background:var(--reject)}
+    #status{font-size:1.2rem;font-weight:800}#status[data-status="REJECT"]{color:var(--reject)}#status[data-status="WARNING"]{color:var(--warn)}#status[data-status="ACCEPT"]{color:var(--ok)}
+    .stats{display:flex;gap:1.3rem;flex-wrap:wrap;margin:.4rem 0 1rem;color:var(--muted)}.stats strong{color:var(--text)}
+    .table-wrap{max-height:330px;overflow:auto;border:1px solid var(--border);border-radius:7px}table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{padding:.55rem;text-align:left;border-bottom:1px solid var(--border)}th{position:sticky;top:0;background:#22324a}td{overflow-wrap:anywhere}
+    .error{color:var(--reject);min-height:1.4rem;margin-top:.6rem}footer{font-size:.83rem;color:var(--muted);margin-top:1.5rem}a{color:var(--accent)}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.panel{padding:1rem}textarea{min-height:190px}}
+  </style>
+  <script src="./westgard.js" defer></script>
+  <script src="./app.js" defer></script>
 </head>
-<body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Qc Westgard Sentinel Engine</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Qc Westgard Sentinel Engine Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "qc-westgard-sentinel-engine",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
-</body>
-</html>
+<body><main>
+  <header>
+    <div class="eyebrow">Analytical quality control · Browser-only</div>
+    <h1>Westgard QC Sentinel</h1>
+    <p>Evaluate chronological control measurements against modern Westgard rules, visualize standardized results, and export an annotated QC report.</p>
+  </header>
+  <div class="layout">
+    <section class="panel" aria-labelledby="input-title">
+      <h2 id="input-title">QC measurements</h2>
+      <p>One row per QC material per run, in chronological order. Use assigned means and SDs for each material.</p>
+      <label for="csv-input">CSV data</label>
+      <textarea id="csv-input" spellcheck="false" aria-describedby="format-hint"></textarea>
+      <div class="hint" id="format-hint">Required columns: <code>run,level,value,mean,sd</code>. Up to 10,000 rows. Keep different QC lots or reference settings in separate analyses.</div>
+      <label for="file-input">Or open a local CSV file</label>
+      <input type="file" id="file-input" accept=".csv,text/csv">
+      <div class="actions">
+        <button type="button" id="evaluate">Evaluate QC</button>
+        <button type="button" class="secondary" id="example">Load example</button>
+      </div>
+      <div id="error" class="error" role="alert"></div>
+      <div class="notice">Educational and analytical decision support only. Does not connect to an analyzer, halt a batch, or authorize release of patient results. Follow your laboratory SOP. Do not enter patient identifiers.</div>
+    </section>
+    <section class="panel" aria-labelledby="result-title">
+      <h2 id="result-title">Levey–Jennings overview</h2>
+      <div class="legend" aria-label="Plot color meanings"><span><i class="dot normal"></i>No rule</span><span><i class="dot warning"></i>1₂s warning</span><span><i class="dot reject"></i>Rejection rule</span></div>
+      <div id="chart" class="chart-wrap" role="img" aria-label="QC z-scores with control limits; run an evaluation to display data"></div>
+      <div aria-live="polite">
+        <div id="status">Not evaluated</div>
+        <div id="summary" class="stats"></div>
+        <p id="interpretation">Select Evaluate QC to analyze the example dataset.</p>
+      </div>
+      <div class="actions">
+        <button id="download-json" class="secondary" disabled>Export JSON</button>
+        <button id="download-csv" class="secondary" disabled>Export annotated CSV</button>
+      </div>
+    </section>
+  </div>
+  <section class="panel" aria-labelledby="flags-title">
+    <h2 id="flags-title">Triggered rule events</h2>
+    <div class="table-wrap"><table><thead><tr><th>Run</th><th>Rule</th><th>Decision</th><th>Point indices (1-based)</th></tr></thead><tbody id="flag-rows"><tr><td colspan="4">No evaluation yet.</td></tr></tbody></table></div>
+  </section>
+  <footer>Modern, non-gated multirule interpretation: 1₂s is a warning; 1₃s, 2₂s, R₄s, 4₁s, and 10x are rejection rules. R₄s is evaluated only within a run. All processing remains in this browser session; no data are transmitted by the application. <a href="https://www.westgard.com/westgard-rules.html" rel="noopener noreferrer">Rule reference</a>.</footer>
+</main></body></html>
