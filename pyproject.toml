@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qc-westgard-sentinel-engine"
+name = "qc-westgard-sentinel-agent"
 version = "2.0.0"
 description = "Westgard Sentinel: Real-Time Multi-Rule Analytical Quality Control & Calibration Engine"
 readme = "README.md"
@@ -13,15 +13,23 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Medical Science",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["pydantic>=2,<3"]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110,<1", "uvicorn>=0.27,<1"]
+dev = ["pytest>=8,<10"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "qc_westgard_sentinel_agent*"]
+
 
 [project.scripts]
 qc-westgard-sentinel-engine = "qc_westgard_sentinel_agent.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/qc-westgard-sentinel-engine"
-Repository = "https://github.com/abusuraihsakhri/qc-westgard-sentinel-engine.git"
+Repository = "https://github.com/abusuraihsakhri/qc-westgard-sentinel-agent.git"
