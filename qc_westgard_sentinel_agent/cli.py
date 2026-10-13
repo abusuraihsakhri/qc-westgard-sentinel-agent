@@ -89,7 +89,7 @@ def main(argv=None):
                 result_json = json.dumps(report, indent=2)
                 if args.output:
                     with open(args.output, "w", encoding="utf-8") as f:
-                        f.write(result_json + "\\n")
+                        f.write(result_json + "\n")
                 else:
                     print(result_json)
                 return 0
