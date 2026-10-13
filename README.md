@@ -1,226 +1,106 @@
-# Qc Westgard Sentinel Agent
+# qc-westgard-sentinel-agent
 
-> **Domain:** Clinical Decision Support & Biomedical Computing
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+A deterministic analytical quality-control evaluator implementing Westgard multirule interpretation, with a browser-only Levey–Jennings interface, Python CLI, and optional REST endpoint. The repository also retains its earlier generic threshold-based multi-agent demonstrations for compatibility.
 
-<div align="center">
+## Use the browser application
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+The static application is in [`web/`](web/). Open it through a local static server:
 
-</div>
-
----
-
-## 📖 What It Does
-
-**Qc Westgard Sentinel Agent** is an advanced analytical and computational platform implementing Real-Time Multi-Rule Analytical QC & Levey-Jennings Evaluator. It provides:
-
-- Multi-agent analytical QC layer evaluating Levey-Jennings charts against Westgard rules
-- Real-time quality control monitoring with automated batch halting
-- HMAC-SHA256 tamper-evident audit trail for all evaluations
-- Zero-PHI outbound guard to prevent protected health information leaks
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`Severity`** — dedicated module for severity evaluation and state verification.
-- **`DomainKnowledgeRegistry`**: Enterprise domain rules, guideline matrices, and evidence benchmarks.
-- **`AgentAlert`** — dedicated module for agent alert evaluation and state verification.
-- **`LeveyJenningsEvaluatorAgent`**: Specialized Sub-Agent 1 for Levey-Jennings chart evaluation
-- **`WestgardRuleEngineAgent`**: Specialized Sub-Agent 2 for Westgard rule engine processing
-- **`CalibrationDriftDetectorAgent`**: Specialized Sub-Agent 3 for calibration drift detection
-
-### 🛡️ Enterprise Security Features
-
-- **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-- **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-- **Input Validation:** Bounds checking on metric values and path traversal protection for file operations.
-
----
-
-## 🚀 Installation
-
-### Prerequisites
-- Python 3.9 or higher
-- pip package manager
-
-### Setup
 ```bash
-# Clone the repository
-git clone https://github.com/abusuraihsakhri/qc-westgard-sentinel-agent.git
-cd qc-westgard-sentinel-agent
-
-# Install dependencies
-pip install -e .
-
-# For development (includes test dependencies)
-pip install -e ".[dev]"
+python -m http.server 8080 --directory web
 ```
 
----
+Visit `http://127.0.0.1:8080/`. Paste a QC CSV, open a local CSV file, or load the included example. Select **Evaluate QC** to inspect the standardized chart and rule events; export JSON or an annotated CSV. There are no external JavaScript, font, or Python runtime dependencies.
 
-## 💻 CLI Quickstart & Usage
+The GitHub Pages workflow deploys `web/` from the `master` branch. A live link should only be added after the Pages deployment is enabled and verified.
 
-### 1. Single Case Audit
-```bash
-python cli.py audit --task-id CASE-001 --primary 24.5 --secondary 14.0 --critical --status DISCORDANT
+## Westgard interpretation
+
+The dedicated evaluator processes QC observations *in supplied chronological order*, using the assigned target mean and positive standard deviation for each control material:
+
+| Rule | Interpretation | Action |
+| --- | --- | --- |
+| `1_2s` | One result beyond ±2 SD | Warning; assess further |
+| `1_3s` | One result beyond ±3 SD | Reject |
+| `2_2s` | Two sequential results beyond 2 SD on the same side | Reject |
+| `R_4s` | One result beyond +2 SD and another below −2 SD **within the same run** | Reject |
+| `4_1s` | Four sequential results beyond 1 SD on the same side | Reject |
+| `10x` | Ten sequential results on the same side of the mean | Reject |
+
+The evaluator uses the **modern, non-gated interpretation**: `4_1s` and `10x` can trigger without a preceding `1_2s` warning. Sequential checks run within each material across runs. For exactly two consistently recorded control materials per run, `4_1s` also examines two successive complete runs and `10x` five successive complete runs. `2_2s` additionally checks controls within each run. The application does not join separate lots or changed means/SDs: supply them as separate datasets.
+
+Numeric decision limits use strict exceedance: a result exactly at +2 SD is not a `1_2s` warning. An evaluated series is `REJECT` if any rejection rule triggers, `WARNING` for `1_2s` alone, otherwise `ACCEPT`. These terms reflect QC rule interpretation, **not permission to release patient results**. Instrument interlocks, calibration actions, and notifications are not implemented.
+
+References: [Westgard multirule definitions](https://www.westgard.com/westgard-rules.html) and [multirule interpretation across control materials and runs](https://www.westgard.com/lessons/basic-qc-practices/lesson18.html).
+
+## QC CSV input
+
+Fields are required and each `run,level` pair must occur at most once:
+
+```csv
+run,level,value,mean,sd
+1,Low,100.5,100,5
+1,High,100.2,100,5
+2,Low,112,100,5
+2,High,113,100,5
 ```
 
-### 2. Batch Processing
+Maximum 10,000 observations. All values must be finite and SD must be greater than zero. Use QC material identifiers only, not patient identifiers.
+
+## Python CLI
+
+Requires Python 3.9 or later.
+
 ```bash
-python cli.py batch -i sample.csv -o results.csv
+python -m pip install -e .
+qc-westgard-sentinel-engine qc -i qc_example.csv -o qc_report.json
 ```
 
-### 3. Interactive Chat
+Or run directly:
+
 ```bash
-python cli.py chat "What is the system status?"
+python -m qc_westgard_sentinel_agent.cli qc -i qc_example.csv
 ```
 
-### 4. Verify Audit Trail Integrity
-```bash
-python cli.py verify-audit
-```
+The original `audit`, `batch`, `chat`, and `serve` package commands remain available. The separate legacy top-level `python cli.py` interface also remains for compatibility. **Those legacy commands apply generic demonstration thresholds, not the Westgard multirule evaluator.**
 
-### 5. Launch REST API Server
+## Optional REST server and local Docker
+
 ```bash
+python -m pip install -e '.[server]'
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-### Parameter Reference
-| Parameter | Description | Default |
-|:----------|:------------|:--------|
-| `--task-id` | Unique task/case identifier | TASK-2026-001 |
-| `--target` | Target identifier | KEY-TARGET-01 |
-| `--primary` | Primary metric value (float) | 28.5 |
-| `--secondary` | Secondary metric value (float) | 14.2 |
-| `--critical` | Critical flag (boolean) | False |
-| `--status` | Status descriptor | DISCORDANT |
+`POST /api/qc/evaluate` accepts an object containing `measurements`, an array of the five-field QC objects above. The same evaluator powers Python and this endpoint. The original `/api/audit`, `/api/chat`, `/metrics`, `/health`, and `/api/audit/logs` endpoints remain.
 
-### Input Data Schema (CSV Batch)
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Unique task identifier | Required |
-| `target_identifier` | Target/entity identifier | Required |
-| `primary_metric` | Primary measurement value | Required |
-| `secondary_metric` | Secondary measurement value | Optional (default: 0.0) |
-| `status_descriptor` | Status code or phenotype | Optional (default: NOMINAL) |
-| `is_critical_flag` | Emergency escalation flag | Optional (default: False) |
-
----
-
-## 🔌 REST API Endpoints
-
-When running the server (`python cli.py serve`), the following endpoints are available:
-
-| Method | Endpoint | Description |
-|:-------|:---------|:------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/metrics` | Operational metrics |
-| `POST` | `/api/audit` | Submit audit task |
-| `POST` | `/api/chat` | Query assistant |
-| `GET` | `/api/audit/logs` | Get audit trail |
-
-### Example API Request
-```bash
-curl -X POST http://localhost:8000/api/audit \
-  -H "Content-Type: application/json" \
-  -d '{"task-id": "CASE-001", "primary_metric": 24.5, "secondary_metric": 14.0}'
-```
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
-### Security Configuration
-
-Set the `AUDIT_SECRET_KEY` environment variable for production deployments to ensure secure audit signing:
+For Docker Compose, provide a strong secret at runtime:
 
 ```bash
-# Linux/macOS
-export AUDIT_SECRET_KEY="your-secure-random-key-here"
-
-# Windows
-set AUDIT_SECRET_KEY=your-secure-random-key-here
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+docker compose up --build
 ```
 
----
+The Docker API port binds to loopback by default. The REST API has no authentication or HTTPS termination: do **not** expose it directly to untrusted networks.
 
-## 🧪 Testing & Verification
+## Privacy and audit integrity
 
-Run the automated test suite:
+The standalone browser application performs analysis and exports entirely in the browser. It does not transmit, persist, or upload QC data. The backend's legacy task registry and audit chain are **process-memory only**, and the in-memory HMAC signing key defaults to a random ephemeral development key when `AUDIT_SECRET_KEY` is absent. Historical logs are not durable across process restarts.
+
+The legacy PHI guard uses limited pattern matching; it is not comprehensive de-identification or HIPAA certification. Do not submit patient identifiers or regulated clinical data. For any clinical use, verify configured QC procedures against laboratory SOPs and instrument-specific requirements.
+
+## Development and verification
 
 ```bash
-pytest -v
+python -m pip install -e '.[server,dev]'
+python -m pytest -q
+python -m pip check
+node --check web/app.js
+node --check web/westgard.js
+node --test tests/test_westgard_browser.cjs
 ```
 
-Execute high-throughput batch simulation benchmarks:
+CI checks Python 3.10, 3.11, and 3.12 and Node.js 22. The frontend targets current Chrome, Firefox, Edge, and Safari, using standard modern browser APIs. The static app requires no Pyodide or server-side Python.
 
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
+## License
 
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t qc-westgard-sentinel-agent .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secure-key qc-westgard-sentinel-agent
-```
-
-Or using Docker Compose:
-
-```bash
-docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-qc-westgard-sentinel-agent/
-├── agents/                      # Core agent modules
-│   ├── __init__.py             # Package initialization
-│   ├── api.py                  # FastAPI REST API server
-│   ├── base.py                 # Security, PHI guard, audit trail
-│   ├── learning.py             # Bayesian calibration engine
-│   ├── llm_factory.py          # LLM client factory
-│   ├── metrics.py              # Prometheus metrics exporter
-│   ├── models.py               # Pydantic data models
-│   ├── streamer.py             # WebSocket telemetry streamer
-│   ├── supervisor.py           # Supervisor orchestrator
-│   └── workers.py              # Specialized worker agents
-├── tests/                      # Test suite
-│   ├── test_enrichment.py      # Enrichment module tests
-│   └── test_qc_westgard_sentinel_agent.py  # Core agent tests
-├── cli.py                      # Command line interface
-├── westgard_sentinel.py        # Core evaluation agents
-├── simulator.py                # High-throughput simulation
-├── enrichment.py               # Feature enrichment modules
-├── pyproject.toml              # Project configuration
-├── Dockerfile                  # Container build
-├── docker-compose.yml          # Container orchestration
-└── README.md                   # This file
-```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[MIT](LICENSE).
