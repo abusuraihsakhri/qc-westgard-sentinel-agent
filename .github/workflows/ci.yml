@@ -43,3 +43,21 @@ jobs:
         assert AuditLogger.verify_integrity() is True
         print('Security & Zero-PHI Audit Passed!')
         "
+
+  browser-qc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate JavaScript syntax and Westgard parity cases
+        run: |
+          node --check web/westgard.js
+          node --check web/app.js
+          node --test tests/test_westgard_browser.cjs
+      - name: Check static application files
+        run: |
+          test -s web/index.html
+          test -s web/app.js
+          test -s web/westgard.js
