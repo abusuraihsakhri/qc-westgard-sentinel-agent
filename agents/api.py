@@ -3,7 +3,7 @@ FastAPI REST API Server for Qc Westgard Sentinel Agent.
 """
 from fastapi import FastAPI, HTTPException
 from typing import Any, Dict, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .base import AuditLogger
 from .models import SystemTaskPayload
 from .supervisor import SystemSupervisor
@@ -13,7 +13,7 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Qc Westgard Sentinel Agent API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
+    description="Legacy generic rule demonstrations and separate deterministic Westgard QC evaluation.",
     version="3.0.0-ENTERPRISE",
 )
 
@@ -23,7 +23,7 @@ class ChatRequest(BaseModel):
 
 
 class QCEvaluationRequest(BaseModel):
-    measurements: List[Dict[str, Any]]
+    measurements: List[Dict[str, Any]] = Field(min_length=1, max_length=10000)
 
 
 @app.get("/health")
@@ -36,7 +36,7 @@ def metrics():
     return {
         "dossiers_processed_total": len(supervisor.dossier_registry),
         "audit_blocks_total": len(AuditLogger.get_trail()),
-        "system_status": "NOMINAL_OPTIMAL"
+        "system_status": "DEMO_ACTIVE"
     }
 
 
