@@ -25,6 +25,9 @@
         if (raw === undefined || raw === null || typeof raw === "boolean" || String(raw).trim() === "") {
           throw Error("Row " + (index+1) + ": value, mean and sd must be numbers");
         }
+        if (typeof raw === "string" && !/^[+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(raw.trim())) {
+          throw Error("Row " + (index+1) + ": value, mean and sd must be decimal numbers");
+        }
         const num = Number(raw);
         if (Number.isNaN(num)) throw Error("Row " + (index+1) + ": value, mean and sd must be numbers");
         return num;
