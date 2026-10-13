@@ -2,10 +2,12 @@
 FastAPI REST API Server for Qc Westgard Sentinel Agent.
 """
 from fastapi import FastAPI, HTTPException
+from typing import Any, Dict, List
 from pydantic import BaseModel
 from .base import AuditLogger
 from .models import SystemTaskPayload
 from .supervisor import SystemSupervisor
+from qc_westgard_sentinel_agent.westgard import evaluate_qc
 
 supervisor = SystemSupervisor(model_provider="mock")
 
@@ -18,6 +20,10 @@ app = FastAPI(
 
 class ChatRequest(BaseModel):
     query: str
+
+
+class QCEvaluationRequest(BaseModel):
+    measurements: List[Dict[str, Any]]
 
 
 @app.get("/health")
@@ -41,6 +47,15 @@ def api_audit(payload: SystemTaskPayload):
         return dossier.to_dict()
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/api/qc/evaluate")
+def api_qc_evaluate(req: QCEvaluationRequest):
+    """Stateless, deterministic Westgard evaluation (no patient data)."""
+    try:
+        return evaluate_qc(req.measurements)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/chat")
