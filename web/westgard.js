@@ -42,7 +42,9 @@
       if (byRun.get(run).some(p => p.level === level)) {
         throw Error("Row " + (index+1) + ": duplicate level " + level + " in run " + run);
       }
-      const p = {index, run, level, value, mean, sd, z: (value-mean)/sd, rules: []};
+      const z = (value - mean) / sd;
+      if (!Number.isFinite(z)) throw Error("Row " + (index+1) + ": standardized value is not finite");
+      const p = {index, run, level, value, mean, sd, z, rules: []};
       points.push(p);
       byRun.get(run).push(p);
     });
@@ -66,7 +68,10 @@
         if (history.length >= 10 && sameSide(history.slice(-10), 0)) flag("10x", history.slice(-10));
       }
       if (runPoints.length >= 2) {
-        if (sameSide(runPoints, 2)) flag("2_2s", runPoints);
+        for (let i = 1; i < runPoints.length; i++) {
+          const pair = runPoints.slice(i-1, i+1);
+          if (sameSide(pair, 2)) flag("2_2s", pair);
+        }
         const high = runPoints.find(p => p.z > 2), low = runPoints.find(p => p.z < -2);
         if (high && low) flag("R_4s", [high, low]);
       }
