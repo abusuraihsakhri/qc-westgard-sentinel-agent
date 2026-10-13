@@ -50,3 +50,10 @@ output.csv
 # OS
 .DS_Store
 Thumbs.db
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
