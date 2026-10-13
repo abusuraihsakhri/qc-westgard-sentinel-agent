@@ -1,20 +1,21 @@
 """
 FastAPI REST Application & Webhooks for Westgard Sentinel: Real-Time Multi-Rule Analytical Quality Control & Calibration Agent.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from .models import ClinicalCasePayload
 from .agents import QCCoordinator
+from .westgard import evaluate_qc
 
 coordinator = QCCoordinator()
 
 def create_app():
     try:
-        from fastapi import FastAPI
-        from pydantic import BaseModel
+        from fastapi import FastAPI, HTTPException
+        from pydantic import BaseModel, Field
 
         app = FastAPI(
             title="Westgard Sentinel: Real-Time Multi-Rule Analytical Quality Control & Calibration Agent",
-            description="Multi-agent analytical QC layer evaluating Levey-Jennings charts against Westgard 1:3s, 2:2s, R:4s, 4:1s, 10x rules and auto-halting batches.",
+            description="Legacy generic threshold evaluation plus stateless Westgard QC analysis. No batch interlock.",
             version="2.0.0-PRO",
         )
 
@@ -30,6 +31,9 @@ def create_app():
 
         class ChatRequest(BaseModel):
             query: str
+
+        class QCEvaluationRequest(BaseModel):
+            measurements: List[Dict[str, Any]] = Field(min_length=1, max_length=10000)
 
         @app.get("/health")
         def health():
@@ -48,6 +52,13 @@ def create_app():
                 biomarkers=req.biomarkers,
             )
             return coordinator.process_case(payload)
+
+        @app.post("/api/qc/evaluate")
+        def api_qc_evaluate(req: QCEvaluationRequest):
+            try:
+                return evaluate_qc(req.measurements)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
 
         @app.post("/api/chat")
         def api_chat(req: ChatRequest):

@@ -7,6 +7,7 @@ import json
 import sys
 from .models import ClinicalCasePayload
 from .agents import QCCoordinator
+from .westgard import evaluate_qc
 
 coordinator = QCCoordinator()
 
@@ -31,6 +32,11 @@ def main(argv=None):
     p_batch = subparsers.add_parser("batch", help="Batch process CSV records")
     p_batch.add_argument("-i", "--input", required=True)
     p_batch.add_argument("-o", "--output", default="results.csv")
+
+    # Analytical Westgard QC (separate from legacy generic case audit)
+    p_qc = subparsers.add_parser("qc", help="Evaluate chronological laboratory QC CSV")
+    p_qc.add_argument("-i", "--input", required=True, help="CSV with run,level,value,mean,sd")
+    p_qc.add_argument("-o", "--output", help="Optional JSON report path")
 
     # Serve
     p_serve = subparsers.add_parser("serve", help="Launch FastAPI REST server")
@@ -67,37 +73,72 @@ def main(argv=None):
         print(f"\n[QCCoordinator]:\n{ans}\n")
         return 0
 
-    if args.command == "batch":
-        with open(args.input, mode="r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            fieldnames = list(reader.fieldnames or [])
-            rows = list(reader)
+    if args.command in ("batch", "qc"):
+        try:
+            with open(args.input, mode="r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f, strict=True)
+                fieldnames = list(reader.fieldnames or [])
+                if not fieldnames:
+                    raise ValueError("CSV header is missing")
+                rows = list(reader)
+            if args.command == "qc":
+                required = {"run", "level", "value", "mean", "sd"}
+                if not required.issubset(fieldnames):
+                    raise ValueError("QC CSV requires columns: run,level,value,mean,sd")
+                report = evaluate_qc(rows)
+                result_json = json.dumps(report, indent=2)
+                if args.output:
+                    with open(args.output, "w", encoding="utf-8") as f:
+                        f.write(result_json + "\n")
+                else:
+                    print(result_json)
+                return 0
 
-        out_fields = fieldnames + ["overall_status", "total_alerts", "stat_critical_alerts", "consensus_summary"]
-        out_rows = []
-        for r in rows:
-            case = ClinicalCasePayload(
-                case_id=r.get("case_id", "CASE-01"),
-                patient_synthetic_id=r.get("patient_synthetic_id", "SYNTH-01"),
-                primary_metric=float(r.get("metric_primary", r.get("primary_metric", 15.0))),
-                secondary_metric=float(r.get("metric_secondary", r.get("secondary_metric", 5.0))),
-                status_flag=r.get("status_flag", r.get("status_text", "NORMAL")),
-                is_stat=bool(r.get("is_stat", r.get("critical_flag", False))),
-            )
-            dossier = coordinator.process_case(case)
-            row_dict = dict(r)
-            row_dict["overall_status"] = dossier["overall_status"]
-            row_dict["total_alerts"] = dossier["total_alerts"]
-            row_dict["stat_critical_alerts"] = dossier["stat_critical_alerts"]
-            row_dict["consensus_summary"] = dossier["consensus_summary"]
-            out_rows.append(row_dict)
+            def parse_bool(value):
+                if isinstance(value, bool):
+                    return value
+                normalized = str(value).strip().lower()
+                if normalized in ("true", "1", "yes", "y"):
+                    return True
+                if normalized in ("false", "0", "no", "n", ""):
+                    return False
+                raise ValueError(f"Invalid critical flag: {value!r}")
 
-        with open(args.output, mode="w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=out_fields)
-            writer.writeheader()
-            writer.writerows(out_rows)
-        print(f"Batch processed {len(out_rows)} records -> {args.output}")
-        return 0
+            out_fields = list(dict.fromkeys(fieldnames + [
+                "overall_status", "total_alerts", "stat_critical_alerts", "consensus_summary"
+            ]))
+            out_rows = []
+            for row_number, r in enumerate(rows, start=2):
+                try:
+                    case = ClinicalCasePayload(
+                        case_id=r.get("case_id") or "CASE-01",
+                        patient_synthetic_id=r.get("patient_synthetic_id") or "SYNTH-01",
+                        primary_metric=float(r.get("metric_primary") or r.get("primary_metric") or 15.0),
+                        secondary_metric=float(r.get("metric_secondary") or r.get("secondary_metric") or 5.0),
+                        status_flag=r.get("status_flag") or r.get("status_text") or "NORMAL",
+                        is_stat=parse_bool(r.get("is_stat", r.get("critical_flag", False))),
+                    )
+                    dossier = coordinator.process_case(case)
+                except (ValueError, TypeError) as exc:
+                    raise ValueError(f"CSV row {row_number}: {exc}") from exc
+                row_dict = dict(r)
+                row_dict.update({
+                    "overall_status": dossier["overall_status"],
+                    "total_alerts": dossier["total_alerts"],
+                    "stat_critical_alerts": dossier["stat_critical_alerts"],
+                    "consensus_summary": dossier["consensus_summary"],
+                })
+                out_rows.append(row_dict)
+
+            with open(args.output, mode="w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=out_fields)
+                writer.writeheader()
+                writer.writerows(out_rows)
+            print(f"Batch processed {len(out_rows)} records -> {args.output}")
+            return 0
+        except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+            print(f"Error processing CSV: {exc}", file=sys.stderr)
+            return 1
 
     if args.command == "serve":
         try:

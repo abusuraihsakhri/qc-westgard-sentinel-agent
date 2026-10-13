@@ -5,10 +5,10 @@ services:
     build: .
     container_name: qc-westgard-sentinel-engine
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=qc-westgard-sentinel-engine-prod-audit-key-2026
-      - MODEL_PROVIDER=mock
+      AUDIT_SECRET_KEY: ${AUDIT_SECRET_KEY:?Set AUDIT_SECRET_KEY to a strong random secret}
+      MODEL_PROVIDER: mock
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

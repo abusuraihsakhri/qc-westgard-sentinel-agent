@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master, main ]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-audit:
     runs-on: ubuntu-latest
@@ -24,11 +28,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+        pip install -e '.[server,dev]'
 
     - name: Run Pytest Suite
       run: |
-        pytest -v
+        python -m pytest -q
+
+    - name: Package metadata and bytecode check
+      run: |
+        python -m compileall -q agents qc_westgard_sentinel_agent cli.py westgard_sentinel.py
+        python -m pip check
 
     - name: Security SAST & Zero-PHI Audit
       run: |
@@ -38,3 +47,21 @@ jobs:
         assert AuditLogger.verify_integrity() is True
         print('Security & Zero-PHI Audit Passed!')
         "
+
+  browser-qc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate JavaScript syntax and Westgard parity cases
+        run: |
+          node --check web/westgard.js
+          node --check web/app.js
+          node --test tests/test_westgard_browser.cjs
+      - name: Check static application files
+        run: |
+          test -s web/index.html
+          test -s web/app.js
+          test -s web/westgard.js
