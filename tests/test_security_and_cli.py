@@ -51,3 +51,19 @@ def test_qc_cli_rejects_invalid_stddev(tmp_path):
     source = tmp_path / "wrong.csv"
     source.write_text("run,level,value,mean,sd\n1,A,10,10,0\n", encoding="utf-8")
     assert main(["qc", "-i", str(source)]) == 1
+
+
+def test_mock_provider_is_explicit():
+    import pytest
+    from agents.llm_factory import LLMFactory
+    assert "no model inference" in LLMFactory.create("mock").invoke("status").lower()
+    with pytest.raises(ValueError, match="Unsupported model provider"):
+        LLMFactory.create("unavailable-backend")
+
+
+def test_qc_api_endpoint_function():
+    from agents.api import QCEvaluationRequest, api_qc_evaluate
+    request = QCEvaluationRequest(measurements=[
+        {"run": "1", "level": "A", "value": 116, "mean": 100, "sd": 5}
+    ])
+    assert api_qc_evaluate(request)["status"] == "REJECT"
